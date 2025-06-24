@@ -12,6 +12,7 @@ from constants import DT
 from constants import PUPPET_GRIPPER_JOINT_OPEN
 # from utils import load_data # data functions
 from utils_franka import make_franka_loaders as load_data # data functions
+from utils_franka import get_data_params # data functions
 from utils import sample_box_pose, sample_insertion_pose # robot functions
 from utils import compute_dict_mean, set_seed, detach_dict # helper functions
 from policy import ACTPolicy, CNNMLPPolicy
@@ -29,23 +30,24 @@ def main(args):
     ckpt_dir = args['ckpt_dir']
     policy_class = args['policy_class']
     onscreen_render = args['onscreen_render']
-    task_name = args['task_name']
+    # task_name = args['task_name']
     batch_size_train = args['batch_size']
     batch_size_val = args['batch_size']
     num_epochs = args['num_epochs']
 
     # get task parameters
-    is_sim = task_name[:4] == 'sim_'
-    if is_sim:
-        from constants import SIM_TASK_CONFIGS
-        task_config = SIM_TASK_CONFIGS[task_name]
-    else:
-        from aloha_scripts.constants import TASK_CONFIGS
-        task_config = TASK_CONFIGS[task_name]
-    dataset_dir = task_config['dataset_dir']
-    num_episodes = task_config['num_episodes']
-    episode_len = task_config['episode_len']
-    camera_names = task_config['camera_names']
+    # is_sim = task_name[:4] == 'sim_'
+    # if is_sim:
+    #     from constants import SIM_TASK_CONFIGS
+    #     task_config = SIM_TASK_CONFIGS[task_name]
+    # else:
+    #     from aloha_scripts.constants import TASK_CONFIGS
+    #     task_config = TASK_CONFIGS[task_name]
+    dataset_dir = args['dataset_dir']
+    # num_episodes = args['num_episodes']
+    # episode_len = args['episode_len']
+    # camera_names = args['camera_names']
+    num_episodes , episode_len, camera_names = get_data_params(dataset_dir)
 
     # fixed parameters
     state_dim = 14
@@ -82,11 +84,11 @@ def main(args):
         'policy_class': policy_class,
         'onscreen_render': onscreen_render,
         'policy_config': policy_config,
-        'task_name': task_name,
+        # 'task_name': task_name,
         'seed': args['seed'],
         'temporal_agg': args['temporal_agg'],
         'camera_names': camera_names,
-        'real_robot': not is_sim
+        'real_robot': True
     }
 
     if is_eval:
@@ -420,11 +422,12 @@ if __name__ == '__main__':
     parser.add_argument('--onscreen_render', action='store_true')
     parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
     parser.add_argument('--policy_class', action='store', type=str, help='policy_class, capitalize', required=True)
-    parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
+    # parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
     parser.add_argument('--batch_size', action='store', type=int, help='batch_size', required=True)
     parser.add_argument('--seed', action='store', type=int, help='seed', required=True)
     parser.add_argument('--num_epochs', action='store', type=int, help='num_epochs', required=True)
     parser.add_argument('--lr', action='store', type=float, help='lr', required=True)
+    parser.add_argument('--dataset_dir', action='store', type=str, help='dataset_dir', required=True)
 
     # for ACT
     parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)

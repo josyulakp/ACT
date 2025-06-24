@@ -151,3 +151,36 @@ def make_franka_loaders(root_dir, batch_train, batch_val, cameras):
       DataLoader(va_ds,batch_val,shuffle=False,pin_memory=True),
       stats
     )
+
+def get_data_params(dataset_dir):
+    '''Get data parameters for the Franka dataset.
+    Args:
+        dataset_dir (str): Path to the dataset directory.
+    Returns:
+        cameras (list): List of camera names found in the dataset.
+        num_episodes (int): Number of episodes in the dataset.
+        episode_length (int): Length of each episode in frames.'''
+    cameras = []
+    # Check if the dataset directory exists and there is at least one episode
+    if not os.path.exists(dataset_dir):
+        raise ValueError(f"Dataset directory {dataset_dir} does not exist.")
+    episode_dirs = [d for d in os.listdir(dataset_dir) if d.startswith('episode_')]
+    if len(episode_dirs) == 0:
+        raise ValueError(f"No episode_ folders found in {dataset_dir}.")
+    else:
+        print(f"Found {len(episode_dirs)} episodes in {dataset_dir}.")
+    first_episode_dir = os.path.join(dataset_dir, 'episode_001')
+    for f in os.listdir(first_episode_dir):
+        # end with .avi and not episode_*
+        if f.endswith('.avi') and not f.startswith('episode_'):
+            cameras.append(f[:-4])
+    cameras.sort()
+    num_episodes = len([d for d in os.listdir(dataset_dir) if d.startswith('episode_')])
+    episode_length = 0
+    if num_episodes > 0:
+        first_episode = os.path.join(dataset_dir, 'episode_001')
+        if os.path.exists(first_episode):
+            data = np.load(os.path.join(first_episode, 'episode_data.npz'))
+            episode_length = data['joint_states'].shape[0]
+    return cameras, num_episodes, episode_length
+    
