@@ -5,7 +5,6 @@ before training:
 
 To train ACT:
     
-    # Transfer Cube task
     python3 imitate_episodes.py \
     --dataset_dir ../franka_recordings/ \
     --ckpt_dir outputs/ \
