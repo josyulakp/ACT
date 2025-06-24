@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 from tqdm import tqdm
 from einops import rearrange
+import wandb
 
 from constants import DT
 from constants import PUPPET_GRIPPER_JOINT_OPEN
@@ -90,6 +91,34 @@ def main(args):
         'camera_names': camera_names,
         'real_robot': True
     }
+
+    # Compose a descriptive run name for wandb
+    run_name = f"{args['policy_class']}_bs{args['batch_size']}_lr{args['lr']}_seed{args['seed']}_epochs{args['num_epochs']}"
+    if 'kl_weight' in args and args['kl_weight'] is not None:
+        run_name += f"_kl{args['kl_weight']}"
+    if 'chunk_size' in args and args['chunk_size'] is not None:
+        run_name += f"_chunk{args['chunk_size']}"
+    if 'hidden_dim' in args and args['hidden_dim'] is not None:
+        run_name += f"_hdim{args['hidden_dim']}"
+    if 'dim_feedforward' in args and args['dim_feedforward'] is not None:
+        run_name += f"_ff{args['dim_feedforward']}"
+    run_name += f"_{os.path.basename(args['dataset_dir'])}"
+
+    # Add more metadata to wandb config
+    wandb_config = dict(args)
+    wandb_config.update({
+        'camera_names': camera_names,
+        'num_episodes': num_episodes,
+        'episode_len': episode_len,
+        'run_name': run_name
+    })
+    # Initialize wandb with detailed run name and config
+    wandb.init(
+    project="ACTFranka",
+    entity="krishna-j-perceptyne-robots",
+    name=run_name,
+    config=wandb_config
+)
 
     if is_eval:
         ckpt_names = [f'policy_best.ckpt']
@@ -340,7 +369,7 @@ def train_bc(train_dataloader, val_dataloader, config):
     min_val_loss = np.inf
     best_ckpt_info = None
     for epoch in tqdm(range(num_epochs)):
-        print(f'\nEpoch {epoch}')
+        # print(f'\nEpoch {epoch}')
         # validation
         with torch.inference_mode():
             policy.eval()
@@ -355,11 +384,15 @@ def train_bc(train_dataloader, val_dataloader, config):
             if epoch_val_loss < min_val_loss:
                 min_val_loss = epoch_val_loss
                 best_ckpt_info = (epoch, min_val_loss, deepcopy(policy.state_dict()))
-        print(f'Val loss:   {epoch_val_loss:.5f}')
+        # print(f'Val loss:   {epoch_val_loss:.5f}')
+        # Log validation loss to wandb
+        wandb.log({"val_loss": epoch_val_loss, "epoch": epoch})
         summary_string = ''
         for k, v in epoch_summary.items():
-            summary_string += f'{k}: {v.item():.3f} '
-        print(summary_string)
+            # Log all validation metrics to wandb
+            wandb.log({f"val_{k}": v, "epoch": epoch})
+            # (no print)
+        # print(summary_string)
 
         # training
         policy.train()
@@ -374,12 +407,15 @@ def train_bc(train_dataloader, val_dataloader, config):
             train_history.append(detach_dict(forward_dict))
         epoch_summary = compute_dict_mean(train_history[(batch_idx+1)*epoch:(batch_idx+1)*(epoch+1)])
         epoch_train_loss = epoch_summary['loss']
-        print(f'Train loss: {epoch_train_loss:.5f}')
+        # print(f'Train loss: {epoch_train_loss:.5f}')
+        # Log training loss to wandb
+        wandb.log({"train_loss": epoch_train_loss, "epoch": epoch})
         summary_string = ''
         for k, v in epoch_summary.items():
-            summary_string += f'{k}: {v.item():.3f} '
-        print(summary_string)
-
+            # Log all training metrics to wandb
+            wandb.log({f"train_{k}": v, "epoch": epoch})
+            # (no print)
+        # print(summary_string)
         if epoch % 100 == 0:
             ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{epoch}_seed_{seed}.ckpt')
             torch.save(policy.state_dict(), ckpt_path)
@@ -407,13 +443,16 @@ def plot_history(train_history, validation_history, num_epochs, ckpt_dir, seed):
         train_values = [summary[key].item() for summary in train_history]
         val_values = [summary[key].item() for summary in validation_history]
         plt.plot(np.linspace(0, num_epochs-1, len(train_history)), train_values, label='train')
-        plt.plot(np.linspace(0, num_epochs-1, len(validation_history)), val_values, label='validation')
-        # plt.ylim([-0.1, 1])
-        plt.tight_layout()
+        plt.plot(np.linspace(0, num_epochs-1, len(validation_history)), val_values, label='val')
         plt.legend()
-        plt.title(key)
+        plt.title(f"{key} over epochs")
+        plt.xlabel("Epoch")
+        plt.ylabel(key)
         plt.savefig(plot_path)
-    print(f'Saved plots to {ckpt_dir}')
+        plt.close()
+        # Log plot to wandb
+        wandb.log({f"{key}_curve": wandb.Image(plot_path)})
+    # print(f'Saved plots to {ckpt_dir}')
 
 
 if __name__ == '__main__':
