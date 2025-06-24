@@ -421,7 +421,7 @@ def train_bc(train_dataloader, val_dataloader, config):
         if epoch % 100 == 0:
             ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{epoch}_seed_{seed}.ckpt')
             torch.save(policy.state_dict(), ckpt_path)
-            obj_name = "frankaACT/"+f'policy_epoch_{epoch}_seed_{seed}.ckpt'
+            obj_name = "ACTcheckpoints/"+f'policy_epoch_{epoch}_seed_{seed}.ckpt'
             s3.upload_file(ckpt_path, "pr-checkpoints", obj_name)
             plot_history(train_history, validation_history, epoch, ckpt_dir, seed)
 
