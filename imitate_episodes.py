@@ -479,4 +479,4 @@ if __name__ == '__main__':
     parser.add_argument('--dim_feedforward', action='store', type=int, help='dim_feedforward', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
     
-    main(vars(parser.parse_args()))
+    main(vars(parser.parse_args())) 
