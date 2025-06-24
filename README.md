@@ -1,6 +1,25 @@
-before training:
+Create a conda env:
     
-    conda activate lerobot
+    conda create -n franka_teleop python=3.8.10
+    conda activate franka_teleop
+    pip install torchvision
+    pip install torch
+    pip install pyquaternion
+    pip install pyyaml
+    pip install rospkg
+    pip install pexpect
+    pip install mujoco==2.3.7
+    pip install dm_control==1.0.14
+    pip install opencv-python
+    pip install matplotlib
+    pip install einops
+    pip install packaging
+    pip install h5py
+    pip install ipython    
+
+Before training:
+    
+    conda activate franka_teleop
     cd detr/ && pip install -e .
 
 To train ACT:
