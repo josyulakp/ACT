@@ -37,7 +37,7 @@ class FrankaDataset(Dataset):
         # approximate qvel by finite diff
         ts        = data['timestamps']
         dt        = np.diff(ts, prepend=ts[0])
-        qvel_all  = np.vstack([np.zeros((1,8)), np.diff(qpos_all, axis=0)]) / dt[:,None]
+        qvel_all  = np.vstack([np.zeros((1,8)), np.diff(qpos_all, axis=0)])
         
         # action ∈ ℝ^(T,7) ← commanded via gello_joint_states
         action_all = data['gello_joint_states'].astype(np.float32)
@@ -51,7 +51,6 @@ class FrankaDataset(Dataset):
         
         # Append gripper commands to make it 8-dimensional
         action_all = np.hstack([action_all, gripper_commands])
-        
         T = qpos_all.shape[0]
 
         # --- pick a random start ---
@@ -147,8 +146,8 @@ def make_franka_loaders(root_dir, batch_train, batch_val, cameras):
     tr_ds = FrankaDataset(tr, cameras, stats)
     va_ds = FrankaDataset(va, cameras, stats)
     return (
-      DataLoader(tr_ds,batch_train,shuffle=True,pin_memory=True),
-      DataLoader(va_ds,batch_val,shuffle=False,pin_memory=True),
+      DataLoader(tr_ds,batch_train,shuffle=True,pin_memory=True,collate_fn=franka_collate_fn),
+      DataLoader(va_ds,batch_val,shuffle=False,pin_memory=True,collate_fn=franka_collate_fn),
       stats
     )
 
@@ -183,4 +182,26 @@ def get_data_params(dataset_dir):
             data = np.load(os.path.join(first_episode, 'episode_data.npz'))
             episode_length = data['joint_states'].shape[0]
     return cameras, num_episodes, episode_length
-    
+
+from torch.nn.functional import pad
+
+def franka_collate_fn(batch):
+    images, qpos, actions, masks = zip(*batch)  # list of tensors
+
+    # Images are same shape already
+    images = torch.stack(images, dim=0)
+    qpos   = torch.stack(qpos, dim=0)
+
+    # Pad action sequences to max length
+    max_len = max(a.shape[0] for a in actions)
+    padded_actions = []
+    padded_masks   = []
+    for a, m in zip(actions, masks):
+        pad_amt = max_len - a.shape[0]
+        padded_actions.append(pad(a, (0, 0, 0, pad_amt)))  # pad on dim=0
+        padded_masks.append(pad(m, (0, pad_amt), value=True))  # pad mask as True (meaning "ignore")
+
+    action_tensor = torch.stack(padded_actions, dim=0)
+    mask_tensor   = torch.stack(padded_masks, dim=0)
+
+    return images, qpos, action_tensor, mask_tensor

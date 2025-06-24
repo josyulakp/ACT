@@ -47,10 +47,10 @@ def main(args):
     # num_episodes = args['num_episodes']
     # episode_len = args['episode_len']
     # camera_names = args['camera_names']
-    num_episodes , episode_len, camera_names = get_data_params(dataset_dir)
+    camera_names , num_episodes , episode_len  = get_data_params(dataset_dir)
 
     # fixed parameters
-    state_dim = 14
+    state_dim = 8
     lr_backbone = 1e-5
     backbone = 'resnet18'
     if policy_class == 'ACT':
