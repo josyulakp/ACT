@@ -1,3 +1,8 @@
+before training:
+    
+    conda activate lerobot
+    cd detr/ && pip install -e .
+
 To train ACT:
     
     # Transfer Cube task
