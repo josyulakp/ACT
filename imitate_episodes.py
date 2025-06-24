@@ -18,7 +18,7 @@ from utils import compute_dict_mean, set_seed, detach_dict # helper functions
 from policy import ACTPolicy, CNNMLPPolicy
 from visualize_episodes import save_videos
 
-from sim_env import BOX_POSE
+# from sim_env import BOX_POSE
 
 import IPython
 e = IPython.embed
@@ -103,7 +103,7 @@ def main(args):
         print()
         exit()
 
-    train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val)
+    train_dataloader, val_dataloader, stats = load_data(dataset_dir,batch_size_train, batch_size_val, camera_names)
 
     # save dataset stats
     if not os.path.isdir(ckpt_dir):
