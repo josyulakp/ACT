@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from copy import deepcopy
 from tqdm import tqdm
 from einops import rearrange
+import boto3
 import wandb
 
 from constants import DT
@@ -24,6 +25,7 @@ from visualize_episodes import save_videos
 import IPython
 e = IPython.embed
 
+s3 = boto3.client('s3')
 def main(args):
     set_seed(1)
     # command line parameters
@@ -419,6 +421,8 @@ def train_bc(train_dataloader, val_dataloader, config):
         if epoch % 100 == 0:
             ckpt_path = os.path.join(ckpt_dir, f'policy_epoch_{epoch}_seed_{seed}.ckpt')
             torch.save(policy.state_dict(), ckpt_path)
+            obj_name = "frankaACT/"+f'policy_epoch_{epoch}_seed_{seed}.ckpt'
+            s3.upload_file(ckpt_path, "pr-checkpoints", obj_name)
             plot_history(train_history, validation_history, epoch, ckpt_dir, seed)
 
     ckpt_path = os.path.join(ckpt_dir, f'policy_last.ckpt')
